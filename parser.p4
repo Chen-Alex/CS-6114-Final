@@ -8,7 +8,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name("parse_instrs") state parse_instrs {
-        packet.extract(hdr.instructions);
+        packet.extract(hdr.instrs.next);
+        packet.extract(hdr.instrs.next);
+        packet.extract(hdr.instrs.next);
+        packet.extract(hdr.instrs.next);
+        packet.extract(hdr.instrs.next);
+        transition parse_output;
+    }
+    @name("parse_output") state parse_output {
+        packet.extract(hdr.output);
         transition parse_ipv4;
     }
     @name("parse_ipv4") state parse_ipv4 {
@@ -24,6 +32,7 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.instructions);
+        packet.emit(hdr.output);
         packet.emit(hdr.ipv4);
     }
 }

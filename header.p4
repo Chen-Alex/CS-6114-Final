@@ -39,6 +39,10 @@ header instr_t {
     bit<27> data;
 }
 
+header output_t {
+    bit<32> data;
+}
+
 struct metadata {
     @name("ingress_metadata")
     ingress_metadata_t   ingress_metadata;
@@ -50,7 +54,9 @@ struct headers {
     @name("ethernet")
     ethernet_t ethernet;
     @name("instructions")
-    instr_t[N_INSTR] instructions;
+    instr_t[N_INSTR] instrs;
+    @name("output")
+    output_t output;
     @name("ipv4")
     ipv4_t     ipv4;
 }

@@ -31,6 +31,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    
+    register<bit<32>>(32) register_file;
+    bit<5> reg_a;
+    bit<5> reg_b;
+    bit<5> reg_d;
+    bit<16> imm;
+    
     @name("_drop") action _drop() {
         mark_to_drop();
     }
@@ -41,6 +48,75 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("set_dmac") action set_dmac(bit<48> dmac) {
         hdr.ethernet.dstAddr = dmac;
+    }
+    @name("extract_bits") action extract_bits(bit<27> data) {
+        reg_a = data[0:4];
+        reg_b = data[5:9];
+        reg_d = data[21:25];
+        imm = data[5:20];
+    }
+    @name("add") action add() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 + tmp2);
+    }
+    @name("sub") action sub() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 - tmp2);
+    }
+    @name("mul") action mul() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 * tmp2);
+    }
+    @name("lshft") action lshft() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp1 << reg_b);
+    }
+    @name("rshft") action shft() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp1 >> reg_b);
+    }
+    @name("op_and") action op_and() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 & tmp2);
+    }
+    @name("op_or") action op_or() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 | tmp2);
+    }
+    @name("op_xor") action op_xor() {
+        extract_bits(hdr.instrs[0]);
+        bit<32> tmp1;
+        bit<32> tmp2; 
+        register_file.read(tmp1, (bit<32>) reg_a);
+        register_file.read(tmp2, (bit<32>) reg_b);
+        register_file.write((bit<32>) reg_d, tmp1 ^ tmp2);
+    }
+    @name("pop_instr") action pop_instr() {
+        hdr.instrs.pop_front(1);
     }
     @name("ipv4_lpm") table ipv4_lpm {
         actions = {
