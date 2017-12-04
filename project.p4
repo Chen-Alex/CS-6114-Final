@@ -33,10 +33,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
 
     register<bit<32>>(32) register_file;
+    register<bit<32>>(65536) big_register_file;
     bit<5> reg_a;
     bit<5> reg_b;
     bit<5> reg_d;
     bit<16> imm;
+    bit upper;
 
     @name("_drop") action _drop() {
         mark_to_drop();
@@ -54,6 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         reg_b = data[21:17];
         reg_d = data[5:1];
         imm = data[21:6];
+        upper = data[0:0];
     }
     @name("add") action add() {
         extract_bits(hdr.instrs[0].data);
@@ -115,6 +118,53 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 ^ tmp2);
     }
+    @name("addi") action addi() {
+        extract_bits(hdr.instr[0].data); 
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp + (bit<32>) imm);
+    }
+    @name("addi") action subi() {
+        extract_bits(hdr.instr[0].data); 
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp - (bit<32>) imm);
+    }
+    @name("addi") action muli() {
+        extract_bits(hdr.instr[0].data); 
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp * (bit<32>) imm);
+    }
+    @name("read") action read() {
+        extract_bits(hdr.instr[0].data);
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        hdr.output.data = tmp;
+    }
+    @name("write") action write() {
+        extract_bits(hdr.instr[0].data); 
+        bit<32> data = (bit<32>) imm;
+        if (upper) {
+          imm <<= 16;
+        }
+        register_file.write((bit<32>) reg_d, data);
+    }
+    @name("readm") action readm() {
+        extract_bits(hdr.instr[0].data);
+        bit<32> data;
+        big_register_file.read(data, (bit<32>) imm);
+        register_file.write((bit<32>) reg_d, data);
+    }
+    @name("writem") action writem() {
+        extract_bits(hdr.instr[0].data);
+        bit<32> data;
+        register_file.read(data, (bit<32>) reg_a);
+        big_register_file.write((bit<32>) imm, data);
+    }
+    @name("noop") action noop() {
+        // Do nothing, but record the fact that a noop action was triggered
+    }
     @name("pop_instr") action pop_instr() {
         hdr.instrs.pop_front(1);
     }
@@ -154,6 +204,122 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         op_and;
         op_or;
         op_xor;
+        addi;
+        subi;
+        muli;
+        read;
+        write;
+        readm;
+        writem;
+        noop; // Stronger version of noop that halts computation on this packet
+      }
+      key = {
+        hdr.instrs[0].opcode: exact;
+      }
+      size = 32;
+      default_action = _drop;
+    }
+    @name("opcode2") table opcode2 {
+      actions = {
+        _drop;
+        NoAction;
+        add;
+        sub;
+        mul;
+        lshft;
+        rshft;
+        op_and;
+        op_or;
+        op_xor;
+        addi;
+        subi;
+        muli;
+        read;
+        write;
+        readm;
+        writem;
+        noop; // Stronger version of noop that halts computation on this packet
+      }
+      key = {
+        hdr.instrs[0].opcode: exact;
+      }
+      size = 32;
+      default_action = _drop;
+    }
+    @name("opcode3") table opcode3 {
+      actions = {
+        _drop;
+        NoAction;
+        add;
+        sub;
+        mul;
+        lshft;
+        rshft;
+        op_and;
+        op_or;
+        op_xor;
+        addi;
+        subi;
+        muli;
+        read;
+        write;
+        readm;
+        writem;
+        noop; // Stronger version of noop that halts computation on this packet
+      }
+      key = {
+        hdr.instrs[0].opcode: exact;
+      }
+      size = 32;
+      default_action = _drop;
+    }
+    @name("opcode4") table opcode4 {
+      actions = {
+        _drop;
+        NoAction;
+        add;
+        sub;
+        mul;
+        lshft;
+        rshft;
+        op_and;
+        op_or;
+        op_xor;
+        addi;
+        subi;
+        muli;
+        read;
+        write;
+        readm;
+        writem;
+        noop; // Stronger version of noop that halts computation on this packet
+      }
+      key = {
+        hdr.instrs[0].opcode: exact;
+      }
+      size = 32;
+      default_action = _drop;
+    }
+    @name("opcode5") table opcode5 {
+      actions = {
+        _drop;
+        NoAction;
+        add;
+        sub;
+        mul;
+        lshft;
+        rshft;
+        op_and;
+        op_or;
+        op_xor;
+        addi;
+        subi;
+        muli;
+        read;
+        write;
+        readm;
+        writem;
+        noop; // Stronger version of noop that halts computation on this packet
       }
       key = {
         hdr.instrs[0].opcode: exact;
@@ -162,22 +328,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
       default_action = _drop;
     }
     apply {
-        if (hdr.instrs[0].isValid() && hdr.output.isValid()) {
-            register_file.write(0,25);
-            register_file.write(1,23);
-            opcode.apply();
-            // pop_instr();
-            // opcode.apply();
-            // pop_instr();
-            // opcode.apply();
-            // pop_instr();
-            // opcode.apply();
-            // pop_instr();
-            // opcode.apply();
-            if (hdr.ipv4.isValid()) {
-              ipv4_lpm.apply();
-              forward.apply();
+        if (hdr.instrs[0].isValid() && hdr.instrs[1].isValid() && hdr.instrs[2].isValid() && hdr.instrs[3].isValid() && hdr.instrs[4].isValid() &&hdr.output.isValid()) {
+            if (opcode.apply().action_run != noop) {
+                pop_instr();
+                if (opcode2.apply().action_run != noop) {
+                    pop_instr();
+                    if (opcode3.apply().action_run != noop) {
+                        pop_instr();
+                        if (opcode4.apply().action_run != noop) {
+                            pop_instr();
+                            opcode5.apply();
+                        }
+                    }
+                }
             }
+        }
+        if (hdr.ipv4.isValid()) {
+          ipv4_lpm.apply();
+          forward.apply();
         }
     }
 }
