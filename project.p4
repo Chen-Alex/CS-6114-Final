@@ -31,13 +31,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    
+
     register<bit<32>>(32) register_file;
     bit<5> reg_a;
     bit<5> reg_b;
     bit<5> reg_d;
     bit<16> imm;
-    
+
     @name("_drop") action _drop() {
         mark_to_drop();
     }
@@ -50,67 +50,67 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dmac;
     }
     @name("extract_bits") action extract_bits(bit<27> data) {
-        reg_a = data[0:4];
-        reg_b = data[5:9];
-        reg_d = data[21:25];
-        imm = data[5:20];
+        reg_a = data[26:22];
+        reg_b = data[21:17];
+        reg_d = data[5:1];
+        imm = data[21:6];
     }
     @name("add") action add() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 + tmp2);
     }
     @name("sub") action sub() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 - tmp2);
     }
     @name("mul") action mul() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 * tmp2);
     }
     @name("lshft") action lshft() {
-        extract_bits(hdr.instrs[0]);
-        bit<32> tmp; 
-        register_file.read(tmp1, (bit<32>) reg_a);
-        register_file.write((bit<32>) reg_d, tmp1 << reg_b);
+        extract_bits(hdr.instrs[0].data);
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp << reg_b);
     }
-    @name("rshft") action shft() {
-        extract_bits(hdr.instrs[0]);
-        bit<32> tmp; 
-        register_file.read(tmp1, (bit<32>) reg_a);
-        register_file.write((bit<32>) reg_d, tmp1 >> reg_b);
+    @name("rshft") action rshft() {
+        extract_bits(hdr.instrs[0].data);
+        bit<32> tmp;
+        register_file.read(tmp, (bit<32>) reg_a);
+        register_file.write((bit<32>) reg_d, tmp >> reg_b);
     }
     @name("op_and") action op_and() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 & tmp2);
     }
     @name("op_or") action op_or() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 | tmp2);
     }
     @name("op_xor") action op_xor() {
-        extract_bits(hdr.instrs[0]);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp1;
-        bit<32> tmp2; 
+        bit<32> tmp2;
         register_file.read(tmp1, (bit<32>) reg_a);
         register_file.read(tmp2, (bit<32>) reg_b);
         register_file.write((bit<32>) reg_d, tmp1 ^ tmp2);
@@ -162,16 +162,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
       default_action = _drop;
     }
     apply {
-        if (hdr.instrs.isValid() && hdr.output.isValid()) {
+        if (hdr.instrs[0].isValid() && hdr.output.isValid()) {
+            register_file.write(0,25);
+            register_file.write(1,23);
             opcode.apply();
-            pop_instr();
-            opcode.apply();
-            pop_instr();
-            opcode.apply();
-            pop_instr();
-            opcode.apply();
-            pop_instr();
-            opcode.apply();
+            // pop_instr();
+            // opcode.apply();
+            // pop_instr();
+            // opcode.apply();
+            // pop_instr();
+            // opcode.apply();
+            // pop_instr();
+            // opcode.apply();
             if (hdr.ipv4.isValid()) {
               ipv4_lpm.apply();
               forward.apply();

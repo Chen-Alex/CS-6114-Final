@@ -31,7 +31,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.instructions);
+        packet.emit(hdr.instrs);
         packet.emit(hdr.output);
         packet.emit(hdr.ipv4);
     }
