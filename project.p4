@@ -142,10 +142,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
+    @name("opcode") table opcode {
+      actions = {
+        _drop;
+        NoAction;
+        add;
+        sub;
+        mul;
+        lshft;
+        rshft;
+        op_and;
+        op_or;
+        op_xor;
+      }
+      key = {
+        hdr.instrs[0].opcode: exact;
+      }
+      size = 32;
+      default_action = _drop;
+    }
     apply {
-        if (hdr.ipv4.isValid()) {
-          ipv4_lpm.apply();
-          forward.apply();
+        if (hdr.instrs.isValid() && hdr.output.isValid()) {
+            opcode.apply();
+            pop_instr();
+            opcode.apply();
+            pop_instr();
+            opcode.apply();
+            pop_instr();
+            opcode.apply();
+            pop_instr();
+            opcode.apply();
+            if (hdr.ipv4.isValid()) {
+              ipv4_lpm.apply();
+              forward.apply();
+            }
         }
     }
 }
