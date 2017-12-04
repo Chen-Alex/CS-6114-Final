@@ -24,7 +24,7 @@ def get_if():
     return iface
 
 def handle_pkt(pkt):
-    if Tunnel in pkt or (TCP in pkt and pkt[TCP].dport == 1234):
+    if Instr in pkt or (TCP in pkt and pkt[TCP].dport == 1234):
         print "got a packet"
         pkt.show2()
         sys.stdout.flush()

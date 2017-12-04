@@ -1,0 +1,5 @@
+write r1 15 0
+write r2 30 0
+add r1 r2 r3
+writem r3 1
+readm 1 r4

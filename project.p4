@@ -119,45 +119,45 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         register_file.write((bit<32>) reg_d, tmp1 ^ tmp2);
     }
     @name("addi") action addi() {
-        extract_bits(hdr.instr[0].data); 
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp;
         register_file.read(tmp, (bit<32>) reg_a);
         register_file.write((bit<32>) reg_d, tmp + (bit<32>) imm);
     }
-    @name("addi") action subi() {
-        extract_bits(hdr.instr[0].data); 
+    @name("subi") action subi() {
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp;
         register_file.read(tmp, (bit<32>) reg_a);
         register_file.write((bit<32>) reg_d, tmp - (bit<32>) imm);
     }
-    @name("addi") action muli() {
-        extract_bits(hdr.instr[0].data); 
+    @name("muli") action muli() {
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp;
         register_file.read(tmp, (bit<32>) reg_a);
         register_file.write((bit<32>) reg_d, tmp * (bit<32>) imm);
     }
     @name("read") action read() {
-        extract_bits(hdr.instr[0].data);
+        extract_bits(hdr.instrs[0].data);
         bit<32> tmp;
         register_file.read(tmp, (bit<32>) reg_a);
         hdr.output.data = tmp;
     }
     @name("write") action write() {
-        extract_bits(hdr.instr[0].data); 
+        extract_bits(hdr.instrs[0].data);
         bit<32> data = (bit<32>) imm;
-        if (upper) {
-          imm <<= 16;
+        if (upper == 1) {
+          data = data <<16;
         }
         register_file.write((bit<32>) reg_d, data);
     }
     @name("readm") action readm() {
-        extract_bits(hdr.instr[0].data);
+        extract_bits(hdr.instrs[0].data);
         bit<32> data;
         big_register_file.read(data, (bit<32>) imm);
         register_file.write((bit<32>) reg_d, data);
     }
     @name("writem") action writem() {
-        extract_bits(hdr.instr[0].data);
+        extract_bits(hdr.instrs[0].data);
         bit<32> data;
         register_file.read(data, (bit<32>) reg_a);
         big_register_file.write((bit<32>) imm, data);
@@ -329,15 +329,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.instrs[0].isValid() && hdr.instrs[1].isValid() && hdr.instrs[2].isValid() && hdr.instrs[3].isValid() && hdr.instrs[4].isValid() &&hdr.output.isValid()) {
-            if (opcode.apply().action_run != noop) {
-                pop_instr();
-                if (opcode2.apply().action_run != noop) {
+            switch (opcode.apply().action_run) {
+                noop: {exit;}
+                default: {
                     pop_instr();
-                    if (opcode3.apply().action_run != noop) {
-                        pop_instr();
-                        if (opcode4.apply().action_run != noop) {
+                    switch (opcode2.apply().action_run) {
+                        noop: {exit;}
+                        default: {
                             pop_instr();
-                            opcode5.apply();
+                            switch (opcode3.apply().action_run) {
+                                noop: {exit;}
+                                default: {
+                                    pop_instr();
+                                    switch (opcode4.apply().action_run) {
+                                        noop: {exit;}
+                                        default: {
+                                            pop_instr();
+                                            opcode5.apply();
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
