@@ -53,7 +53,7 @@ def main():
     #     pkt = pkt / Tunnel(tunnel_id=tunnel_id) / IP(dst=addr) / args.message
     # else:
     print "sending on interface {} to IP addr {}".format(iface, str(addr))
-    pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+
     # pkt = pkt / Instr()/IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / args.message
     # pkt2 = Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
     # pkt2 = pkt2 /IP(dst=addr) /Instr() /TCP(dport=1234, sport=random.randint(49152,65535)) / 'I love Qiqi'
@@ -62,7 +62,26 @@ def main():
     'muli':12,'divi':13, 'read':14,'write':15,'readm':16,'writem':17,'noop':31}
     # with open('instructions.txt') as f:
     # h is the total set of instructions
-    h = ['write 15 r1 0', 'write 30 r2 0',  'add r1 r2 r3', 'writem r3 1', 'readm 1 r4']
+    # h = ['write 15 r1 0', 'write 30 r2 0',  'add r1 r2 r3', 'writem r3 1', 'readm 1 r4']
+    h = ["write 1 r0 0",
+    "write 2 r1 0",
+    "write 3 r2 0",
+    "write 4 r3 0",
+    "write 5 r4 0",
+    "write 6 r5 0",
+    "write 7 r6 0",
+    "write 8 r7 0",
+    "write 9 r8 0",
+    "write 10 r9 0",
+    "add r0 r1 r1",
+    "add r2 r3 r3",
+    "add r4 r5 r5",
+    "add r6 r7 r7",
+    "add r8 r9 r9",
+    "add r1 r3 r3",
+    "add r5 r7 r7",
+    "add r3 r7 r7",
+    "add r7 r9 r9"]
     g= []
     while len(h) >=5:
         g.append(h[0:5])
@@ -74,6 +93,7 @@ def main():
             t.append('noop')
         g.append(t)
     for f in g:
+        pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
         for line in f:
             words = line.split(" ")
             words = [word.strip() for word in words]
@@ -145,14 +165,14 @@ def main():
                 s += '0'*6
                 print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-    # the below Instr header is for output header
-    pkt = pkt / Instr()/IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / args.message
-    pkt.show2()
-    # pkt2.show2()
-#    hexdump(pkt)
-#    print "len(pkt) = ", len(pkt)
-    sendp(pkt, iface=iface, verbose=False)
-    # sendp(pkt2, iface=iface, verbose=False)
+        # the below Instr header is for output header
+        pkt = pkt / Instr()/IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / args.message
+        pkt.show2()
+        # pkt2.show2()
+    #    hexdump(pkt)
+    #    print "len(pkt) = ", len(pkt)
+        sendp(pkt, iface=iface, verbose=False)
+        # sendp(pkt2, iface=iface, verbose=False)
 
 
 
