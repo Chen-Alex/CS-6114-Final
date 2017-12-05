@@ -1,10 +1,10 @@
 {
-  "program": "project.p4",
+  "program": "projectv2.p4",
   "language": "p4-16",
   "targets": {
     "mininet": {
       "num-hosts": 2,
-      "switch-config": "s1.config"
+      "switch-config": "s1v2.config"
     }
   }
 }
