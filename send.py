@@ -61,78 +61,90 @@ def main():
     dic = {'add':0,'sub':1,'mul':2,'div':3,'lshift':4,'rshift':5,'and':7,'or':8,'xor':9,'addi':10,'subi':11,
     'muli':12,'divi':13, 'read':14,'write':15,'readm':16,'writem':17,'noop':31}
     # with open('instructions.txt') as f:
-    f = ['write 15 r1 0', 'write 30 r2 0',  'add r1 r2 r3', 'writem r3 1', 'readm 1 r4']
-    for line in f:
-        words = line.split(" ")
-        words = [word.strip() for word in words]
-        opcode = dic[words[0]]
-        print "opcode is " + str(opcode)
+    # h is the total set of instructions
+    h = ['write 15 r1 0', 'write 30 r2 0',  'add r1 r2 r3', 'writem r3 1', 'readm 1 r4']
+    g= []
+    while len(h) >=5:
+        g.append(h[0:5])
+        h = h[5:]
+    if len(h) > 0:
+        i = 5-len(h)
+        t = h
+        for j in range(i):
+            t.append('noop')
+        g.append(t)
+    for f in g:
+        for line in f:
+            words = line.split(" ")
+            words = [word.strip() for word in words]
+            opcode = dic[words[0]]
+            print "opcode is " + str(opcode)
 
-        if opcode == 31:
-            pkt = pkt / Instr(a=248)
-        # for non immediate operation
-        elif opcode < 10:
-            s = ''
-            s += "{0:05b}".format(opcode)
-            r1 = (int) (words[1][1:])
-            s += "{0:05b}".format(r1)
-            r2 = (int) (words[2][1:])
-            s += "{0:05b}".format(r2)
-            s += '0'*11
-            rd = (int) (words[3][1:])
-            s += "{0:05b}".format(rd)
-            s += "0"
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-        elif opcode >= 10 and opcode <14:
-            s = ''
-            s += "{0:05b}".format(opcode)
-            r1 = (int) (words[1][1:])
-            s += "{0:05b}".format(r1)
-            imm = (int) (words[2])
-            s += "{0:016b}".format(imm)
-            rd = (int) (words[3][1:])
-            s += "{0:05b}".format(rd)
-            s += "0"
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-        elif opcode == 14: # read from register
-            s = "{0:05b}".format(opcode)
-            r1 = (int) (words[1][1:])
-            s += "{0:05b}".format(r1)
-            s += '0'*22
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-        elif opcode == 15: #write to register
-            s = "{0:05b}".format(opcode)
-            s += '0'*5
-            imm = (int) (words[1])
-            s += "{0:016b}".format(imm)
-            rd = (int) (words[2][1:])
-            s += "{0:05b}".format(rd)
-            flag = words[3]
-            s += words[3]
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-        elif opcode == 16: # load from memeory to register
-            s = "{0:05b}".format(opcode)
-            s += '0'*5
-            imm = (int) (words[1])
-            s += "{0:016b}".format(imm)
-            rd = (int) (words[2][1:])
-            s += "{0:05b}".format(rd)
-            s += '0'
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
-        elif opcode == 17: # write from register to memeory
-            s = "{0:05b}".format(opcode)
-            r1 = (int) (words[1][1:])
-            s += "{0:05b}".format(r1)
-            imm = (int) (words[2])
-            s += "{0:016b}".format(imm)
-            s += '0'*6
-            print s
-            pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            if opcode == 31:
+                pkt = pkt / Instr(a=248)
+            # for non immediate operation
+            elif opcode < 10:
+                s = ''
+                s += "{0:05b}".format(opcode)
+                r1 = (int) (words[1][1:])
+                s += "{0:05b}".format(r1)
+                r2 = (int) (words[2][1:])
+                s += "{0:05b}".format(r2)
+                s += '0'*11
+                rd = (int) (words[3][1:])
+                s += "{0:05b}".format(rd)
+                s += "0"
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            elif opcode >= 10 and opcode <14:
+                s = ''
+                s += "{0:05b}".format(opcode)
+                r1 = (int) (words[1][1:])
+                s += "{0:05b}".format(r1)
+                imm = (int) (words[2])
+                s += "{0:016b}".format(imm)
+                rd = (int) (words[3][1:])
+                s += "{0:05b}".format(rd)
+                s += "0"
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            elif opcode == 14: # read from register
+                s = "{0:05b}".format(opcode)
+                r1 = (int) (words[1][1:])
+                s += "{0:05b}".format(r1)
+                s += '0'*22
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            elif opcode == 15: #write to register
+                s = "{0:05b}".format(opcode)
+                s += '0'*5
+                imm = (int) (words[1])
+                s += "{0:016b}".format(imm)
+                rd = (int) (words[2][1:])
+                s += "{0:05b}".format(rd)
+                flag = words[3]
+                s += words[3]
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            elif opcode == 16: # load from memeory to register
+                s = "{0:05b}".format(opcode)
+                s += '0'*5
+                imm = (int) (words[1])
+                s += "{0:016b}".format(imm)
+                rd = (int) (words[2][1:])
+                s += "{0:05b}".format(rd)
+                s += '0'
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
+            elif opcode == 17: # write from register to memeory
+                s = "{0:05b}".format(opcode)
+                r1 = (int) (words[1][1:])
+                s += "{0:05b}".format(r1)
+                imm = (int) (words[2])
+                s += "{0:016b}".format(imm)
+                s += '0'*6
+                print s
+                pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
     # the below Instr header is for output header
     pkt = pkt / Instr()/IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / args.message
     pkt.show2()
