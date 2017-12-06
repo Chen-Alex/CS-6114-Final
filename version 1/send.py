@@ -98,7 +98,6 @@ def main():
             words = line.split(" ")
             words = [word.strip() for word in words]
             opcode = dic[words[0]]
-            print "opcode is " + str(opcode)
 
             if opcode == 31:
                 pkt = pkt / Instr(a=248)
@@ -114,7 +113,6 @@ def main():
                 rd = (int) (words[3][1:])
                 s += "{0:05b}".format(rd)
                 s += "0"
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
             elif opcode >= 10 and opcode <14:
                 s = ''
@@ -126,14 +124,12 @@ def main():
                 rd = (int) (words[3][1:])
                 s += "{0:05b}".format(rd)
                 s += "0"
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
             elif opcode == 14: # read from register
                 s = "{0:05b}".format(opcode)
                 r1 = (int) (words[1][1:])
                 s += "{0:05b}".format(r1)
                 s += '0'*22
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
             elif opcode == 15: #write to register
                 s = "{0:05b}".format(opcode)
@@ -144,7 +140,6 @@ def main():
                 s += "{0:05b}".format(rd)
                 flag = words[3]
                 s += words[3]
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
             elif opcode == 16: # load from memeory to register
                 s = "{0:05b}".format(opcode)
@@ -154,7 +149,6 @@ def main():
                 rd = (int) (words[2][1:])
                 s += "{0:05b}".format(rd)
                 s += '0'
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
             elif opcode == 17: # write from register to memeory
                 s = "{0:05b}".format(opcode)
@@ -163,7 +157,6 @@ def main():
                 imm = (int) (words[2])
                 s += "{0:016b}".format(imm)
                 s += '0'*6
-                print s
                 pkt = pkt / Instr(a=int(s[0:8],2),b=int(s[8:16],2),c=int(s[16:24],2),d=int(s[24:32],2))
         # the below Instr header is for output header
         pkt = pkt / Instr()/IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / args.message

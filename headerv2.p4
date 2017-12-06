@@ -9,6 +9,7 @@ struct ingress_metadata_t {
     bit<5> reg_d;
     bit<16> imm;
     bit write_upper;
+    bit<5> current_opcode;
 }
 
 struct intrinsic_metadata_t {
@@ -16,6 +17,8 @@ struct intrinsic_metadata_t {
     bit<32> lf_field_list;
     bit<16> mcast_grp;
     bit<16> egress_rid;
+    bit<8> resubmit_flag;
+    bit<8> recirculate_flag;
 }
 
 header ethernet_t {
@@ -40,17 +43,18 @@ header ipv4_t {
 }
 
 header instr_t {
-    bit<5> opcode;
-    bit<27> data;
-}
-
-header output_t {
-    bit<32> data;
+    bit<32> instr;
 }
 
 header identifier_t {
-    bit<15> id;
-    bit is_last;
+    bit<32> location;
+}
+
+header query_t {
+    bit<8> is_memory;
+    bit<16> index;
+    bit<32> output;
+    bit<8> success;
 }
 
 struct metadata {
@@ -65,10 +69,10 @@ struct headers {
     ethernet_t ethernet;
     @name("instructions")
     instr_t[N_INSTR] instrs;
-    @name("output")
-    output_t output;
     @name("identifier")
     identifier_t identifier;
+    @name("query")
+    query_t query;
     @name("ipv4")
     ipv4_t     ipv4;
 }

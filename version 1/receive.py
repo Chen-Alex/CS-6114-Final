@@ -10,6 +10,7 @@ from scapy.all import IP, TCP, UDP, Raw
 from scapy.layers.inet import _IPOption_HDR
 # from tunnel import Tunnel
 from Instruction import Instr
+from Query import Query
 
 def get_if():
     ifs=get_if_list()
@@ -24,10 +25,14 @@ def get_if():
     return iface
 
 def handle_pkt(pkt):
-    if Instr in pkt or (TCP in pkt and pkt[TCP].dport == 1234):
-        print "got a packet"
-        pkt.show2()
-        sys.stdout.flush()
+    if Query in pkt:
+    	print "received a query packet: "
+    	out1 = pkt[Query].out1
+        out2 = pkt[Query].out2
+        out3 = pkt[Query].out3
+        out4 = pkt[Query].out4
+        print (out4 + 256 * out3 + 256 * 256 * out2 + 256 * 256 * 256 * out1)
+    	sys.stdout.flush()
 
 def main():
     ifaces = filter(lambda i: 'eth' in i, os.listdir('/sys/class/net/'))

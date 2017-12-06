@@ -1,8 +1,8 @@
 #include <core.p4>
 #include <v1model.p4>
 
-#include "header.p4"
-#include "parser.p4"
+#include "headerv2.p4"
+#include "parserv2.p4"
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("rewrite_mac") action rewrite_mac(bit<48> smac) {
@@ -35,10 +35,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register<bit<32>>(32) register_file;
     register<bit<32>>(65536) memory;
     register<bit<32>>(65536) instr_memory;
-    bit<16> program_counter = 0;
-    bit<16> program_length = 0;
+    register<bit<16>>(1) program_counter;
+    register<bit<16>>(1) program_length;
+    register<bit>(1) is_running;
     bit<32> current_instr;
-    bit is_running = 0;
 
     @name("_drop") action _drop() {
         mark_to_drop();
@@ -51,116 +51,166 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_dmac") action set_dmac(bit<48> dmac) {
         hdr.ethernet.dstAddr = dmac;
     }
-    @name("extract_bits") action extract_bits(bit<27> data) {
-        meta.reg_a = data[26:22];
-        meta.reg_b = data[21:17];
-        meta.reg_d = data[5:1];
-        meta.imm = data[21:6];
-        meta.write_upper = data[0:0];
+    @name("extract_bits") action extract_bits(bit<32> instr) {
+        meta.ingress_metadata.reg_a = instr[26:22];
+        meta.ingress_metadata.reg_b = instr[21:17];
+        meta.ingress_metadata.reg_d = instr[5:1];
+        meta.ingress_metadata.imm = instr[21:6];
+        meta.ingress_metadata.write_upper = instr[0:0];
     }
     @name("add") action add() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 + tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 + tmp2);
     }
     @name("sub") action sub() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 - tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 - tmp2);
     }
     @name("mul") action mul() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 * tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 * tmp2);
     }
     @name("lshft") action lshft() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        register_file.write((bit<32>) meta.reg_d, tmp << meta.reg_b);
+        register_file.read(tmp, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp << meta.ingress_metadata.reg_b);
     }
     @name("rshft") action rshft() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        register_file.write((bit<32>) meta.reg_d, tmp >> meta.reg_b);
+        register_file.read(tmp, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp >> meta.ingress_metadata.reg_b);
     }
     @name("op_and") action op_and() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 & tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 & tmp2);
     }
     @name("op_or") action op_or() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 | tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 | tmp2);
     }
     @name("op_xor") action op_xor() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp1;
         bit<32> tmp2;
-        register_file.read(tmp1, (bit<32>) meta.reg_a);
-        register_file.read(tmp2, (bit<32>) meta.reg_b);
-        register_file.write((bit<32>) meta.reg_d, tmp1 ^ tmp2);
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_b);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp1 ^ tmp2);
     }
     @name("addi") action addi() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        register_file.write((bit<32>) meta.reg_d, tmp + (bit<32>) meta.imm);
+        register_file.read(tmp, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp + (bit<32>) meta.ingress_metadata.imm);
     }
     @name("subi") action subi() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        register_file.write((bit<32>) meta.reg_d, tmp - (bit<32>) meta.imm);
+        register_file.read(tmp, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp - (bit<32>) meta.ingress_metadata.imm);
     }
     @name("muli") action muli() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        register_file.write((bit<32>) meta.reg_d, tmp * (bit<32>) meta.imm);
-    }
-    @name("read") action read() {
-        extract_bits(hdr.instrs[0].data);
-        bit<32> tmp;
-        register_file.read(tmp, (bit<32>) meta.reg_a);
-        hdr.output.data = tmp;
+        register_file.read(tmp, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, tmp * (bit<32>) meta.ingress_metadata.imm);
     }
     @name("write") action write() {
-        extract_bits(hdr.instrs[0].data);
-        bit<32> data = (bit<32>) meta.imm;
-        if (meta.write_upper == 1) {
+        extract_bits(current_instr);
+        bit<32> data = (bit<32>) meta.ingress_metadata.imm;
+        if (meta.ingress_metadata.write_upper == 1) {
           data = data <<16;
         }
-        register_file.write((bit<32>) meta.reg_d, data);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, data);
     }
     @name("readm") action readm() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> data;
-        big_register_file.read(data, (bit<32>) meta.imm);
-        register_file.write((bit<32>) meta.reg_d, data);
+        memory.read(data, (bit<32>) meta.ingress_metadata.imm);
+        register_file.write((bit<32>) meta.ingress_metadata.reg_d, data);
     }
     @name("writem") action writem() {
-        extract_bits(hdr.instrs[0].data);
+        extract_bits(current_instr);
         bit<32> data;
-        register_file.read(data, (bit<32>) meta.reg_a);
-        big_register_file.write((bit<32>) meta.imm, data);
+        register_file.read(data, (bit<32>) meta.ingress_metadata.reg_a);
+        memory.write((bit<32>) meta.ingress_metadata.imm, data);
+    }
+    @name("beq") action beq() {
+        extract_bits(current_instr);
+        bit<32> tmp1;
+        bit<32> tmp2;
+        bit<16> tgt;
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_d);
+        program_counter.read(tgt, 0);
+        if (tmp1 == tmp2) {
+            tgt = meta.ingress_metadata.imm - 1;
+        } 
+        program_counter.write(0, tgt);
+    }
+    @name("bneq") action bneq() {
+        extract_bits(current_instr);
+        bit<32> tmp1;
+        bit<32> tmp2;
+        bit<16> tgt;
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_d);
+        program_counter.read(tgt, 0);
+        if (tmp1 != tmp2) {
+            tgt = meta.ingress_metadata.imm - 1;
+        } 
+        program_counter.write(0, tgt);
+    }
+    @name("bgt") action bgt() {
+        extract_bits(current_instr);
+        bit<32> tmp1;
+        bit<32> tmp2;
+        bit<16> tgt;
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_d);
+        program_counter.read(tgt, 0);
+        if (tmp1 > tmp2) {
+            tgt = meta.ingress_metadata.imm - 1;
+        } 
+        program_counter.write(0, tgt);    
+    }
+    @name("bgeq") action bgeq() {
+        extract_bits(current_instr);
+        bit<32> tmp1;
+        bit<32> tmp2;
+        bit<16> tgt;
+        register_file.read(tmp1, (bit<32>) meta.ingress_metadata.reg_a);
+        register_file.read(tmp2, (bit<32>) meta.ingress_metadata.reg_d);
+        program_counter.read(tgt, 0);
+        if (tmp1 >= tmp2) {
+            tgt = meta.ingress_metadata.imm - 1;
+        } 
+        program_counter.write(0, tgt);    
+    }
+    @name("jump") action jump() {
+        extract_bits(current_instr);
+        program_counter.write(0, meta.ingress_metadata.imm - 1);    
     }
     @name("noop") action noop() {
         // Do nothing, but record the fact that a noop action was triggered
@@ -207,45 +257,73 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         addi;
         subi;
         muli;
-        read;
         write;
         readm;
         writem;
+        beq;
+        bneq;
+        bgt;
+        bgeq;
+        jump;
         noop;
       }
       key = {
-        current_instr[31:27] : exact;
+        meta.ingress_metadata.current_opcode : exact;
       }
       size = 32;
       default_action = _drop;
     }
     apply {
-        @atomic {
-            if (hdr.instrs[0].isValid() && hdr.instrs[1].isValid() && hdr.instrs[2].isValid() && hdr.instrs[3].isValid() && hdr.instrs[4].isValid() && hdr.output.isValid()) {
-                if (is_running) {
-                    resubmit();
-                }
-                bit<16> start = 5 * ((bit<16>) hdr.identifier.id);
-                instr_memory.write((bit<32> start), hdr.instrs[0].opcode ++ hdr.instrs[0].data);
-                instr_memory.write((bit<32> start) + 1, hdr.instrs[1].opcode ++ hdr.instrs[1].data);
-                instr_memory.write((bit<32> start) + 2, hdr.instrs[2].opcode ++ hdr.instrs[2].data);
-                instr_memory.write((bit<32> start) + 3, hdr.instrs[3].opcode ++ hdr.instrs[3].data);
-                instr_memory.write((bit<32> start) + 4, hdr.instrs[4].opcode ++ hdr.instrs[4].data);
-                if (program_length < start + 4) {
-                    program_length = start + 4;
+        if (hdr.instrs[0].isValid() && hdr.instrs[1].isValid() && hdr.instrs[2].isValid() && hdr.instrs[3].isValid() && hdr.instrs[4].isValid()) {
+            bit ir;
+            is_running.read(ir, 0);
+            if (ir == 0) {
+                bit<16> start = 5 * ((bit<16>) hdr.identifier.location);
+                instr_memory.write((bit<32>) start, hdr.instrs[0].instr);
+                instr_memory.write((bit<32>) start + 1, hdr.instrs[1].instr);
+                instr_memory.write((bit<32>) start + 2, hdr.instrs[2].instr);
+                instr_memory.write((bit<32>) start + 3, hdr.instrs[3].instr);
+                instr_memory.write((bit<32>) start + 4, hdr.instrs[4].instr);
+                bit<16> pl;
+                program_length.read(pl, 0);
+                if (pl < start + 4) {
+                    program_length.write(0, start + 4);
                 }
             }
-            if (hdr.identifier.is_last == 1) {
-                is_running = 1;
-                instr_memory.read(current_instr, (bit<32>) program_counter);
-                opcode.apply();
-                program_counter = program_counter + 1;
-                if (program_counter < program_length) {
-                    resubmit();
+        }
+        @atomic {
+            if (hdr.ethernet.etherType == 0x6666) {
+                is_running.write(0, 1);
+                bit<16> pc;
+                bit<16> pl;
+                program_counter.read(pc, 0);
+                program_length.read(pl, 0);
+                if (pc > pl) {
+                    program_counter.write(0, 0);
+                    program_length.write(0, 0);
+                    is_running.write(0, 0);
                 } else {
-                    program_counter = 0;
-                    program_length = 0;
-                    is_running = 0;
+                    instr_memory.read(current_instr, (bit<32>) pc);
+                    meta.ingress_metadata.current_opcode = current_instr[31:27];
+                    opcode.apply();
+                    program_counter.read(pc, 0);
+                    program_counter.write(0, pc + 1);
+                    recirculate<bit>(0);
+                    resubmit<bit>(0);
+                }
+            }
+        }
+        if (hdr.query.isValid()) {
+            bit ir;
+            is_running.read(ir, 0);
+            if (ir == 1) {
+                hdr.query.success = 0;
+            } else {
+                hdr.query.success = 1;
+                if (hdr.query.is_memory == 1) {
+                    memory.read(hdr.query.output, (bit<32>) hdr.query.index);
+                } else { 
+                    register_file.read(hdr.query.output, (bit<32>) hdr.query.index);
                 }
             }
         }
